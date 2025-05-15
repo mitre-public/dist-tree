@@ -1,3 +1,5 @@
+[![Java CI with Gradle](https://github.com/mitre-public/dist-tree/actions/workflows/gradle.yml/badge.svg)](https://github.com/mitre-public/dist-tree/actions/workflows/gradle.yml)
+
 ![regular map](./docs/assets/oneDataPage_oneColor.png)
 Data inside each colored patch is retrieved in a single I/O operation. This pattern of "localized data access" extends
 to high dimensional space.
@@ -10,32 +12,40 @@ This project provides a _Scalable, Durable_ `DistanceTree`.
 
 ## What does a `DistanceTree` do?
 
-> A `DistanceTree` allows you to find _similar_ data in **high-dimensional datasets**.
+> A `DistanceTree<K,V>` is a Key-Value store that allows you to find _similar_ data in **high-dimensional datasets**.
+>
+> A `DistanceTree` can:
+> - Perform **Range Searches:** `getAllWithinRange(K searchKey, double range)` (left side of graphic)
+> - Perform **kNN Searches:** `getNClosest(K searchKey, int n)` (right side of graphic, k = 10)
+> 
+> All `DistanceTree<K,V>` searches return [SearchResults<K, V>](./src/main/java/org/mitre/disttree/SearchResults.java) 
 
-The `DistanceTree` combines aspects of the `B-Tree` and the `M-Tree`. The `DistanceTree` uses aspects of the `B-Tree` to
-minimize the I/O required to get data from durable storage. The `DistanceTree` uses aspects of the `M-Tree` (i.e.
-MetricTree) to optimize searching data embedded in high-dimensional space.
-
-Prior to this project a
-`MetricTree`  [(see here)](https://github.com/mitre-public/commons/blob/main/src/main/java/org/mitre/caasd/commons/collect/MetricTree.java)
-was **_just_** an in-memory data structure. This project adapts `MetricTree's` implementation into a `DistanceTree`
-whose data can persist beyond the lifetime is a single JVM process. The _data storage layer_ backing a `DistanceTree` is
-a fully plug-able component. Each _data storage layer_ (e.g., local files on disk, DuckDB, ScyllaDB, RDS, etc.) will
-have different performance, durability, and dollar cost characteristics. This project allows the user to choose which
-_data storage solution_ they want to use.
-
----
-
-## Goal = Support These Queries
-
-- **Range Query:** `getAllWithinRange(K searchKey, double range)` (left side of graphic)
-- **kNN Query:** `getNClosest(K searchKey, int n)` (right side of graphic, k = 10)
+### Example Searches:
 
 ![range and knn query](./docs/assets/combo.png)
+Imagine _range_ and _knn_ searches like this, implemented efficiently, and applied to high dimensional data!
 
 ---
 
-## Usage
+## Why this Project?
+
+Prior to this project a multi-dimensional data could be searched in a
+`MetricTree` [(see GitHub implementation here)](https://github.com/mitre-public/commons/blob/main/src/main/java/org/mitre/caasd/commons/collect/MetricTree.java).
+Unfortunately, a `MetricTree` is **_just_** an in-memory data structure. This project adapts `MetricTree's`
+implementation into a
+`DistanceTree`.
+
+A `DistanceTree` can:
+
+1. Store a dataset that cannot fit into the current JVM's memory.
+2. Search a dataset that cannot fit into the current JVM's memory.
+3. Persist data beyond the lifetime of a single JVM process.
+4. Choose a "pluggable" _data storage layer_ (e.g., local files on disk, DuckDB, PostgreSQL, etc.). Each _data
+   storage layer_ will have different performance, durability, and dollar cost characteristics.
+
+---
+
+## Quick Start
 
 ### First, Add this dependency to your project
 
@@ -117,48 +127,32 @@ The available DataStores are:
     - **Pros:** Fast! Great for problems that do not need persistent data storage.
     - **Cons:** Does not persist data.
 
----
-
-## What is a _"Metric Space"_
-
-- A [Metric Space](https://en.wikipedia.org/wiki/Metric_space) is a _"math-nerdy"_ algebraic construct.
-- **In a nutshell, you can measure the distance between any two items _in a metric space_.**
-- This means the Keys, `<K>`, used in these Key-Value pairs are "embedded in a metric space"
-- It also means, the `DistanceMetric<K>` defines the metric space because it measures the distance between **any** two
-  keys "in the space"
-    - Be careful, a `DistanceMetric` that defines a metric space has a strict algebraic definition, **DO NOT** get this
-      wrong.
-    - Specifically, a `DistanceMetric` function `d(K key1, K key2)` MUST obey these rules:
-        1. `d(x,y) >= 0`
-        2. `d(x,y) = d(y,x)`
-        3. `d(x,z) <= d(x,y) + d(y,z)`
-        4. (Optional rule) `d(x,y) = 0 if and only if x = y`
-- A `Metric Space` is essentially the _"next best thing"_ when you want to sort & search data that has too many
-  dimensions to correctly search with a 1-dimensional ordering. For example, `LatLong` data is 2-dimensional. If you
-  sort by Latitude you'll sometime wish you had sorted by longitude (and vice versa). However, you can use the distance
-  metric defining a Metric Space to sort by "distance between `LatLong` points". Now you can binary search using "closer
-  together" and "further apart" in place of "greater than" and "less than".
-- In other words, if you can "measure the distance between Keys" you can binary search Key-Value pairs backed by those
-  keys.
+(**Note:** Currently, no pre-packaged `DataStore` is backed by a **truly** highly-reliable data storage system.
+Implementing a `DataStore` backed by a more reliable data storage system is perfectly achievable. We have not
+prioritized this task because DuckDb has been sufficient for our needs.)
 
 ---
 
-## Types of Data that Can be Searched in a `DistanceTree`
+## Types of Data that Can be Searched in a `DistanceTree`?
 
-1. `Latitude Longitude data`
-    - This _simple_ 2-d data.
+**Note:** MITRE's [Commons Project](https://github.com/mitre-public/commons) contains a few data types designed
+specifically to integrate with `DistanceTrees`.  Those include:
+- `LatLong`, `LatLong64`, `LatLongPath`, `LatLong64Path`, `AltitudePath`, and `VehiclePath`
+
+Datatypes from [Commons](https://github.com/mitre-public/commons)
+1. `LatLong` and `LatLong64`
+    - These are _simple_ 2-d location measurements
     - DistanceMetric = `latLong1.distanceTo(latLong2).in(myFavoriteUnit);`
-2. `4-d position data`
-    - (x, y, z, t)
-    - The distance between any two positions will be function of true distance AND time.
-    - A distance function can weight time & distance as needed.
-    - For example, as distance function can ignore time completely OR a distance function can enforce data to be in
-      the "same place at the same time"
-3. `Position Paths`
-    - e.g. `(x, y, z, t)_1`, `(x, y, z, t)_2`, `(x, y, z, t)_3`, `(x, y, z, t)_4`, ...
-    - The distance (e.g. difference) between any two paths can be measured.
-    - This means we can easily search for "similar paths" using a `DistanceTree`
-4. `Time Series curves`
+2. `LatLongPath` and `LatLong64Path`
+     - These are sequences of `LatLong` locations
+     - The distance (e.g. difference) between any two paths can be measured.
+     - This means we can easily search for "similar paths" using a `DistanceTree`
+3. `VehiclePath` data
+     - These are sequences of 3d position data (e.g. (lat, long, alt)_1, (lat, long, alt)_2, (lat, long, alt)_3, ...)
+     - The idea is the same as `LatLongPath`, but also with altitude data
+4. `PathPair` data
+     - These are pairs of `VehiclePaths`
+     - Use the similarity between "VehiclePath Pairs" to find safety events that share similar path dynamics
 5. `Probabilty Mass Functions`
     - [Kullback–Leibler Divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence)
 6. `Markov Transition Matrices`
@@ -168,6 +162,27 @@ The available DataStores are:
 8. `DNA Sequences`
     - Distance Metric = [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance) btw two DNA strings
     - This defines a proper Metric Space!
+
+---
+
+## What is a _"Metric Space"_
+
+- A [Metric Space](https://en.wikipedia.org/wiki/Metric_space) is a _"math-nerdy"_ algebraic construct.
+- **In a nutshell:**
+    - If _you can measure the distance between two items_, then those items are embedded in a metric space.
+- This means you can **directly define** an efficently searchable Metric Space by implementing the `DistanceMetric<K>` [interface](./src/main/java/org/mitre/disttree/DistanceMetric.java).
+    - But be careful! A `DistanceMetric` that defines a metric space has a strict algebraic definition **DO NOT** get this
+      wrong.
+    - A `DistanceMetric` function `d(K key1, K key2)` MUST obey these rules:
+        1. `d(x,y) >= 0`
+        2. `d(x,y) = d(y,x)`
+        3. `d(x,z) <= d(x,y) + d(y,z)`
+- A `Metric Space` is essentially the _"next best thing"_ when you want to efficiently search data that has too many
+  dimensions to correctly search with a 1-dimensional ordering. For example, `LatLong` data is 2-dimensional. If you
+  sort by Latitude you'll sometime wish you had sorted by longitude (and vice versa). However, you can use the distance
+  metric defining a Metric Space to sort by "distance between `LatLong` points". Now you can binary search using "closer
+  together" and "further apart" in place of "greater than" and "less than".
+
 
 ---
 
@@ -201,6 +216,9 @@ Contributions are welcomed and encouraged. We are currently looking for contribu
     - By: Paolo Ciaccia, Marco Patella, and Pavel Zezula
 - ["An implementation of the M-tree index structure for PostgreSQL using GiST](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9119265)
     - By István Donkó, János M. Szalai-Gindl, Gergo Gombos, and Attila Kiss
+- [Vantage-Point trees](https://en.wikipedia.org/wiki/Vantage-point_tree)
+- [Binary space partition trees](https://en.wikipedia.org/wiki/Binary_space_partitioning)
+
 
 **Related Research:**
 
