@@ -1,4 +1,3 @@
-
 ## Goals and Non-Goals
 
 ### User-facing Goals
@@ -28,7 +27,8 @@
     - We might use a DB, we won't implement our own DB.
 2. **Being responsible for data durability.**
     - This project IS NOT taking on data replication and the plethora of issues that requires
-    - This feature must be inherited from a component (e.g. we are reliable because Postgres and Kafka are reliable).
+    - This feature must be inherited from a component. E.g. we are reliable because our internal components like DuckDB,
+      Postgres, and Kafka are reliable.
 3. **Being responsible for ACID transactions.**
     - This project IS NOT taking on properly provided ACID guarantees
     - This project IS responsible for telling us what should be in the transaction -- not HOW to execute the transaction

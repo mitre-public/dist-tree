@@ -5,27 +5,31 @@
 
 ### Date: 2025-03-31 -- All Plans for a REST-API removed
 
-- **Choice:** What is the "best way" for user's to integrate & adopt the DistanceTree's capabilities into production?
-- **Decision:** We will focus on deploying DistanceTree database & search capabilities as a "Java library" that relies on
-  local file access (i.e. the DB will be a file on disk and the library will be responsible from reading that file).
+- **Choice:** What is the _"best way"_ for user's to integrate DistanceTree capabilities into their applications?
+- **Decision:** We will start by deploying DistanceTree database & search capabilities as a "Java library" that relies
+  on
+  local file access. The DB will be a file on disk and the library will be responsible from reading that file.
 - **Context:** We've begun user testing the code-base and refining the public-facing API. We have also gained experience
   with DuckDB.
 - **Reasoning:**
-    - It is **highly unlikely** standing up a REST-API will be a viable near-term solution for sponsor deployment.
-    - Experience with DuckDB showed the power & simplicity of "library & file on disk".
+    - Standing up a service that uses a REST-API is **unlikely** to be a viable near-term solution for our deployment
+      timeline and the target deployment environment.
+    - Experience with DuckDB has shown the power & simplicity of "library & file on disk".
     - Reading persistent data with DuckDB only requires adding a java dependency and a "DB file".
     - The DuckDB dependency has no security issues (it has been scanned).
-    - Providing read access to a "beefy DB file" using a persistent volume claim is an easy lift for our FAA deployment
-    - We can cleanly separate the "how you bake the DB file" from "how you used the DB file"
+    - Providing read access to a "beefy DB file" using a persistent volume claim is an easy lift for our deployment environment.
+    - We can cleanly separate the process that "Builds the DB file" from the process that "Queries the DB file".
 
-### Date: 2025-01-08 -- Should we make RawDataStore's support `containsNodeAt(id)` OR track node creation vs updates
+### Date: 2025-01-08 -- Should we make DataStore's support `containsNodeAt(id)` OR track node creation vs updates
 
 - **OBSOLETE!:** This was a temporary bridge to improving `TreeTransaction`
-- **Choice:** We can make RawDataStore's support a `containsNodeAt(id)` method OR We can update the code that computes
-  tree mutations so that it tracks which nodes are created vs update.
-- **Decision:** Add `containsNodeAt(id)` to the RawDataStore interface
+
+
+- **Choice:** We can make DataStores support a `containsNodeAt(id)` method OR We can update the code that computes
+  tree mutations so that it tracks which nodes are created vs updated.
+- **Decision:** Add `containsNodeAt(id)` to the DataStores interface
 - **Context:** We need to update `TreeTransactions` to distinguish "Create" and "Update" operations. We need
-  `TreeTransactions` to be more "CRUD like" so that `RawDataStores` that use a standard SQL interface have an easy time
+  `TreeTransactions` to be more "CRUD like" so that `DataStores` that use a standard SQL interface have an easy time
   choosing between INSERT and UPDATE operations.
 - **Reasoning:** This is choice is purely do to time limitations. Ideally, the code that tracks tree mutations and
   builds `TreeTransactions` would keep track of which Nodes are created and which Nodes were updated. We can get an MVP
@@ -56,8 +60,8 @@
 - **Context:** TreeTransactions are "ACID transactions" that convert a tree from one state to the next (e.g. add new
   data to the tree while repacking the tree to retain balance).
 - **Challenges:**
-    - A TreeTransaction is likely to move many Entries from one DataPage to another.
-    - We could use **Delta Encoding**: e.g., A TreeTransaction could communicate these updates by saying Entry XYZ moves
+    - A TreeTransaction is likely to move many `Tuples` from one `DataPage` to another.
+    - We could use **Delta Encoding**: e.g., A TreeTransaction could communicate these updates by saying Tuple XYZ moves
       from DataPage 123 to DataPage 456.
     - Alternatively we could use **Full Encoding**: e.g. a TreeTransaction could simply say, "Delete the old DataPages
       123 and 456". Here are complete new version of those two DataPages.
@@ -71,8 +75,7 @@
 ### Date: 2024-08-21 -- Building a DistanceTree from the Ground Up, with Side Splitting is Best
 
 - **Decision:** Building a DistanceTree from the ground up is the best.
-- **Context:** This project was _"on pause"_ for about a year. Upon return, the solution for "maintaining tree balance"
-  and dealing with "overlapping leaf nodes" was clear.
+- **Context:** This conclusion is widely known in the literature.   
 - **Challenges:**
     - The DistanceTree needs to remain balanced or performance will devolve greatly as data load increases.
     - We need to prevent DataPages (i.e. leaf nodes) from overlapping too much otherwise we perform excess IO operations

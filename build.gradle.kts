@@ -17,7 +17,7 @@ repositories {
 dependencies {
     implementation("com.google.guava:guava:32.1.2-jre")
     implementation("com.google.code.gson:gson:2.8.9")
-    implementation("org.mitre:commons:0.0.57") //required for TimeId (not just LatLong examples)
+    implementation("org.mitre:commons:0.0.59") //required for TimeId (not just LatLong examples)
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.6")
     implementation("org.duckdb:duckdb_jdbc:1.2.0")
 

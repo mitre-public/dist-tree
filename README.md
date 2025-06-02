@@ -12,7 +12,7 @@ This project provides a _Scalable, Durable_ `DistanceTree`.
 
 ## What does a `DistanceTree` do?
 
-> A `DistanceTree<K,V>` is a Key-Value store that allows you to find _similar_ data in **high-dimensional datasets**.
+> A `DistanceTree<K,V>` is a Key-Value store that allows you to find _similar_ Key-Value pairs in **high-dimensional datasets**.
 >
 > A `DistanceTree` can:
 > - Perform **Range Searches:** `getAllWithinRange(K searchKey, double range)` (left side of graphic)
@@ -23,31 +23,29 @@ This project provides a _Scalable, Durable_ `DistanceTree`.
 ### Example Searches:
 
 ![range and knn query](./docs/assets/combo.png)
+
 Imagine _range_ and _knn_ searches like this, implemented efficiently, and applied to high dimensional data!
 
 ---
 
 ## Why this Project?
 
-Prior to this project a multi-dimensional data could be searched in a
+Prior to this project, multi-dimensional data was stored and searched using a
 `MetricTree` [(see GitHub implementation here)](https://github.com/mitre-public/commons/blob/main/src/main/java/org/mitre/caasd/commons/collect/MetricTree.java).
 Unfortunately, a `MetricTree` is **_just_** an in-memory data structure. This project adapts `MetricTree's`
-implementation into a
-`DistanceTree`.
+implementation into a `DistanceTree` that can:
 
-A `DistanceTree` can:
-
-1. Store a dataset that cannot fit into the current JVM's memory.
-2. Search a dataset that cannot fit into the current JVM's memory.
+1. Store a dataset that cannot fit into memory.
+2. Search a dataset that cannot fit into memory.
 3. Persist data beyond the lifetime of a single JVM process.
-4. Choose a "pluggable" _data storage layer_ (e.g., local files on disk, DuckDB, PostgreSQL, etc.). Each _data
-   storage layer_ will have different performance, durability, and dollar cost characteristics.
+4. Adopt the _data storage layer_ of their choice (e.g., local files on disk, DuckDB, PostgreSQL, cloud blob storage,
+   etc.). Each _data storage layer_ will have different performance, durability, and dollar cost characteristics.
 
 ---
 
 ## Quick Start
 
-### First, Add this dependency to your project
+### 1 - Add this dependency to your project
 
 ```
 GRADLE:
@@ -63,7 +61,7 @@ MAVEN:
 </dependency>
 ```
 
-### Second, indexing a dataset for search
+### 2 - Gather and Store a Dataset
 
 ``` 
 // Building an DistanceTree starts with a TreeConfig
@@ -78,10 +76,11 @@ List<LatLong> locations = loadBusinessLocations();
 List<String> names = loadBusinessNames();
 tree.addBatches(batchify(locations, names, 1_000));
 
-// --- JVM is shutdown, but the indexed dataset is persisted!
+// JVM is shutdown, but our dataset is persisted!
+System.exit()
 ```
 
-### Third, Searching the Dataset
+### 3 - Search the Dataset
 
 ```
 // The next JVM loads the tree from the default DataStore
@@ -101,6 +100,56 @@ SearchResults<LatLong, String> businessesNearby = tree.rangeSearch(searchKey, se
 // Perform a "knn search"
 SearchResults<LatLong, String> fiveClosestBusinesses = tree.knnSearch(searchKey, 5);
 ```
+
+Note: Searching Key-Value data in a `DistanceTree` does not **require** shutting down the JVM and building a new tree.
+Searches can be performed on the same `tree` that received the original Key-Value batches. However, advanced
+`TreeConfig` options can prohibit co-mingling data mutations (e.g. writes) and data searching (e.g. reads).
+
+---
+
+## What Types of Key Data Can a `DistanceTree` Search?
+
+**In a nutshell:**
+
+- If _you can measure the "distance" between two keys_, then a `DistanceTree` can efficiently search Key-Value pairs
+  using their Keys.
+- MITRE's [Commons Project](https://github.com/mitre-public/commons) contains multiple data types designed to integrate
+  with this `DistanceTree` project.
+    - These pre-built key-types include:`LatLong`, `LatLong64`, `LatLongPath`, `LatLong64Path`, `AltitudePath`, and
+      `VehiclePath`, and `PathPair`.
+
+### Key-types that lend themselves to use in a `DistanceTree`
+
+- **Types derived from physical concepts**
+  1. `LatLong` and `LatLong64`
+      - These are _simple_ 2-d location measurements
+      - DistanceMetric = `latLong1.distanceTo(latLong2).in(myFavoriteUnit);`
+  2. `LatLongPath` and `LatLong64Path`
+      - These are sequences of `LatLong` locations
+       - The distance (e.g. difference) between any two paths can be measured.
+       - This means we can easily search for "similar paths" using a `DistanceTree`
+  3. `VehiclePath` data
+       - These are sequences of 3d position data (e.g. (lat, long, alt)_1, (lat, long, alt)_2, (lat, long, alt)_3, ...)
+       - The idea is the same as `LatLongPath`, but also with altitude data
+  4. `PathPair` data
+       - These are pairs of `VehiclePaths`
+       - Use the similarity between "VehiclePath Pairs" to find safety events that share similar path dynamics
+  5. `Audio Signals`
+      - Compute the FFT of an audio signal
+      - Distance function = "Earth mover distance(FFT_1, FFT_2)"
+
+
+- **Types derived from _mathy_ concepts**
+    1. `n-dimensional unit vectors`
+        - If your keys are simple vectors it may make sense to use
+          a [Vector Database](https://en.wikipedia.org/wiki/Vector_database)
+    2. `Probabilty Mass Functions`
+        - Use the [Kullback–Leibler Divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) to
+          measure the distance btw two PMFs.
+    3. `Markov Transition Matrices`
+        - An `n x n` Markov Transition Matrix is just `n` Probability Mass Functions.
+        - The "distance" between any 2 markov matrices is the sum of `n` separate KL-Divergence measures (one for each
+          pair of rows in the transition matrix).
 
 ---
 
@@ -131,58 +180,6 @@ The available DataStores are:
 Implementing a `DataStore` backed by a more reliable data storage system is perfectly achievable. We have not
 prioritized this task because DuckDb has been sufficient for our needs.)
 
----
-
-## Types of Data that Can be Searched in a `DistanceTree`?
-
-**Note:** MITRE's [Commons Project](https://github.com/mitre-public/commons) contains a few data types designed
-specifically to integrate with `DistanceTrees`.  Those include:
-- `LatLong`, `LatLong64`, `LatLongPath`, `LatLong64Path`, `AltitudePath`, and `VehiclePath`
-
-Datatypes from [Commons](https://github.com/mitre-public/commons)
-1. `LatLong` and `LatLong64`
-    - These are _simple_ 2-d location measurements
-    - DistanceMetric = `latLong1.distanceTo(latLong2).in(myFavoriteUnit);`
-2. `LatLongPath` and `LatLong64Path`
-     - These are sequences of `LatLong` locations
-     - The distance (e.g. difference) between any two paths can be measured.
-     - This means we can easily search for "similar paths" using a `DistanceTree`
-3. `VehiclePath` data
-     - These are sequences of 3d position data (e.g. (lat, long, alt)_1, (lat, long, alt)_2, (lat, long, alt)_3, ...)
-     - The idea is the same as `LatLongPath`, but also with altitude data
-4. `PathPair` data
-     - These are pairs of `VehiclePaths`
-     - Use the similarity between "VehiclePath Pairs" to find safety events that share similar path dynamics
-5. `Probabilty Mass Functions`
-    - [Kullback–Leibler Divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence)
-6. `Markov Transition Matrices`
-7. `Audio Signals`
-    - Compute the FFT of an audio signal
-    - Distance function = "Earth mover distance(FFT_1, FFT_2)"
-8. `DNA Sequences`
-    - Distance Metric = [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance) btw two DNA strings
-    - This defines a proper Metric Space!
-
----
-
-## What is a _"Metric Space"_
-
-- A [Metric Space](https://en.wikipedia.org/wiki/Metric_space) is a _"math-nerdy"_ algebraic construct.
-- **In a nutshell:**
-    - If _you can measure the distance between two items_, then those items are embedded in a metric space.
-- This means you can **directly define** an efficently searchable Metric Space by implementing the `DistanceMetric<K>` [interface](./src/main/java/org/mitre/disttree/DistanceMetric.java).
-    - But be careful! A `DistanceMetric` that defines a metric space has a strict algebraic definition **DO NOT** get this
-      wrong.
-    - A `DistanceMetric` function `d(K key1, K key2)` MUST obey these rules:
-        1. `d(x,y) >= 0`
-        2. `d(x,y) = d(y,x)`
-        3. `d(x,z) <= d(x,y) + d(y,z)`
-- A `Metric Space` is essentially the _"next best thing"_ when you want to efficiently search data that has too many
-  dimensions to correctly search with a 1-dimensional ordering. For example, `LatLong` data is 2-dimensional. If you
-  sort by Latitude you'll sometime wish you had sorted by longitude (and vice versa). However, you can use the distance
-  metric defining a Metric Space to sort by "distance between `LatLong` points". Now you can binary search using "closer
-  together" and "further apart" in place of "greater than" and "less than".
-
 
 ---
 
@@ -191,9 +188,11 @@ Datatypes from [Commons](https://github.com/mitre-public/commons)
 - **Performance:** A discussion on how Tree Configuration choices can impact performance
   is [here](./docs/dimensions-of-performance.md).
 - **Frequently Asked Questions:** are listed [here](./docs/FAQs.md).
+- **What is a Metric Space?:** is discussion [here](./docs/metric-space-def.md)
 - **Storing Nodes, Tuples, and Pages:** is discussed [here](./docs/nodes-and-pages.md).
-- **Goals and Non-Goals:** are discussed [here](./docs/goals-and-nongoals.md).
+- **Project Goals and Non-Goals:** are discussed [here](./docs/goals-and-nongoals.md).
 - **Possible future optimizations:** Are discussed [here](./docs/future-optimizations.md).
+- **Idea Graveyard:** Old and rejected ideas are discussed [here](./docs/idea-graveyard.md)
 
 ---
 

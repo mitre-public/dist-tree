@@ -1,4 +1,3 @@
-
 # Here are thoughts, problems, and ponderings that are no longer relevant due to design progress
 
 ## Important concept users should know
@@ -22,9 +21,6 @@
 - **So what:** I am not sure how this will be relevant in the future but the efficiency of storing and querying data
   will now doubt be impacted by this difference.
 
-
-
-
 ### Thoughts on Binary Tree vs B-Tree
 
 - The original `MetricTree` is a **binary search tree**.
@@ -45,18 +41,21 @@
   Keys in them** to correctly route queries. This means a disk-seek operation on a B-Tree returns "pointer" to
   N-different child nodes. This makes me think the `NodeHeader` could be replaced with a `NodeSet`.
 
-  
 ### Can Probabilistic Node Promotion Improve "Big-O" behavior?
 
-- **Predicted problem**: IF the data being added to a `B-MetricTree` gradually expands the MetricSpace (rather than
-  fills the space more and more densely) THEN the `B-MetricTree` is likely to become more and more unbalanced as the
+- **OBSOLETE**: Early editions of this project used an inferior strategy for incorporating new nodes into the tree. The
+  old strategy would not keep the tree balanced in all cases.
+
+
+- **Predicted problem**: IF the data being added to a `DistanceTree` gradually expands the MetricSpace (rather than
+  fills the space more and more densely) THEN the `DistanceTree` is likely to become more and more unbalanced as the
   data being added to the tree keeps being "sent down the same path"  (WARNING, This whole argument presupposes nodes
   are often split downward)
 - With very high likelihood a good way to combat "gradually worsening imbalance" is to promote nodes to higher layers
   using a probability that is "metered" by the amount of data seen.
 - I suggest using random bits of each the `TimeId` assigned to each Entry. These random bits are essentially a uniform
-  rand distribution. They can be used to randomly select nodes that will "be promoted" a tier
-
+  rand distribution. They can be used to randomly select nodes that will "be promoted" a tier.  (i.e. adopt the
+  randomness used in skip lists)
 
 ### Should `BatchSize` be a part of the configuration?
 
