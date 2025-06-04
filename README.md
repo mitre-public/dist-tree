@@ -45,19 +45,25 @@ implementation into a `DistanceTree` that can:
 
 ## Quick Start
 
+- Adopting this Java library requires your project to be on Java 17 or later.
+- The latest official release is version: `0.0.1`
+- All official releases are available at Maven Central.
+
 ### 1 - Add this dependency to your project
 
-```
 GRADLE:
+```
 dependencies {
-  implementation("org.mitre:dist-tree:X.Y.Z")
+  implementation("org.mitre:dist-tree:0.0.1")
 }
+```
 
 MAVEN:
+```
 <dependency>
     <groupId>org.mitre</groupId>
     <artifactId>dist-tree</artifactId>
-    <version>X.Y.Z</version>
+    <version>0.0.1</version>
 </dependency>
 ```
 
@@ -193,6 +199,7 @@ prioritized this task because DuckDb has been sufficient for our needs.)
 - **Project Goals and Non-Goals:** are discussed [here](./docs/goals-and-nongoals.md).
 - **Possible future optimizations:** Are discussed [here](./docs/future-optimizations.md).
 - **Idea Graveyard:** Old and rejected ideas are discussed [here](./docs/idea-graveyard.md)
+- **Open Source Release Process:** Our **manual(??!!)** release process is described [here](./docs/release-process.md), the script is [here](./scripts/bundle-for-publishing.sh).
 
 ---
 
@@ -205,9 +212,7 @@ Contributions are welcomed and encouraged. We are currently looking for contribu
 
 ---
 
-## Related Research
-
-**Highly Related Research:**
+## Highly Related Research
 
 - ["M-tree An Efficient Access Method for Similarity Search in Metric Spaces"](https://www.vldb.org/conf/1997/P426.PDF)
     - The most relevant paper by Paolo Ciaccia, Marco Patella, and Pavel Zezula
@@ -219,7 +224,7 @@ Contributions are welcomed and encouraged. We are currently looking for contribu
 - [Binary space partition trees](https://en.wikipedia.org/wiki/Binary_space_partitioning)
 
 
-**Related Research:**
+## Related Research
 
 - [PostgreSQL GiST extension](https://www.postgresql.org/docs/8.1/gist.html)
 - [pgvector](https://github.com/pgvector/pgvector)
